@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>UNS - Video Chat</title>
+    
+    <!-- Fontlar -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
 
     <style>
@@ -23,15 +28,15 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             color: var(--text-main);
-            /* Mobildə address bar problemini həll etmək üçün dvh istifadə edirik */
-            height: 100vh; 
+            /* Mobil brauzerlərin ünvan sətrini nəzərə almaq üçün 'dvh' */
+            height: 100vh;
             height: 100dvh; 
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* --- Header --- */
+        /* --- HEADER --- */
         header {
             height: 60px;
             background-color: var(--bg-panel);
@@ -40,20 +45,24 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 15px;
-            flex-shrink: 0; /* Header sıxılmasın */
+            flex-shrink: 0;
+            z-index: 20;
         }
 
         .brand { display: flex; align-items: center; gap: 8px; }
+        
         .logo-symbol { display: flex; align-items: center; }
         .dot { width: 8px; height: 8px; background: var(--caspian-blue); border-radius: 50%; }
         .bridge { width: 15px; height: 2px; background: #FFF; margin: 0 2px; }
-        .brand h1 { font-size: 20px; font-weight: 800; }
-        .online-count { font-size: 13px; color: #888; }
+        
+        .brand h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        
+        .online-count { font-size: 13px; color: #888; font-variant-numeric: tabular-nums; }
         .online-count b { color: var(--caspian-blue); }
 
-        /* --- Video Area --- */
+        /* --- MAIN VIDEO AREA --- */
         main {
-            flex: 1; /* Qalan bütün yeri tut */
+            flex: 1;
             display: flex;
             background: #000;
             position: relative;
@@ -72,31 +81,56 @@
 
         #remote-box { border-right: 1px solid #333; }
         #local-box { background: #111; }
-        
-        video { width: 100%; height: 100%; object-fit: cover; }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Lokal videonu güzgü kimi çevir */
         #localVideo { transform: scaleX(-1); }
 
+        /* Overlay Elementlər */
         .label {
-            position: absolute; top: 15px; left: 15px;
-            background: rgba(0,0,0,0.6); padding: 5px 10px;
-            border-radius: 20px; font-size: 12px; z-index: 10;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+            z-index: 10;
         }
 
         .loader {
-            position: absolute; display: none; flex-direction: column;
-            align-items: center; gap: 10px; z-index: 5;
+            position: absolute;
+            display: none; /* JS ilə idarə olunur */
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 5;
+            color: #ccc;
+            font-size: 14px;
         }
+
         .spinner {
-            width: 35px; height: 35px; border: 3px solid rgba(255,255,255,0.1);
-            border-left-color: var(--caspian-blue); border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-left-color: var(--caspian-blue);
+            border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
+
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* --- Footer (Controls) --- */
+        /* --- FOOTER (CONTROLS) --- */
         footer {
-            /* Hündürlük fixed olsun ki, sıxılmasın */
-            height: 80px; 
+            height: 80px;
             background-color: var(--bg-panel);
             border-top: 1px solid #333;
             display: flex;
@@ -105,39 +139,54 @@
             padding: 10px 15px;
             gap: 10px;
             flex-shrink: 0;
-            /* iPhone Home bar üçün təhlükəsiz zona */
-            padding-bottom: env(safe-area-inset-bottom);
+            /* iPhone Home Bar üçün təhlükəsiz zona */
+            padding-bottom: env(safe-area-inset-bottom); 
+            z-index: 20;
         }
 
         .btn {
-            height: 100%; /* Footerin hündürlüyünə uyğunlaş */
+            height: 100%;
             max-height: 50px;
-            border: none; border-radius: 8px;
-            font-weight: 700; font-size: 16px;
-            color: white; cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            color: white;
+            cursor: pointer;
             text-transform: uppercase;
+            transition: transform 0.1s active;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
+        .btn:active { transform: scale(0.96); }
 
         .btn-start {
             background-color: var(--success);
-            flex: 2; /* Start düyməsi daha geniş olsun */
+            flex: 2; /* Geniş yer tutsun */
         }
 
         .btn-stop {
             background-color: var(--danger);
-            flex: 1; /* Stop düyməsi daha yığcam olsun */
+            flex: 1; /* Daha yığcam olsun */
         }
 
-        .btn:disabled { opacity: 0.5; background-color: #444; }
+        .btn:disabled {
+            opacity: 0.5;
+            background-color: #444;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-        /* --- Mobil Görünüş (Dəyişdirildi) --- */
+        /* --- MOBİL RESPONSIVE --- */
         @media (max-width: 768px) {
             main { flex-direction: column; }
             
-            /* Videoların hündürlüyü bərabər bölünsün */
             .video-box { 
                 width: 100%; 
-                height: 50%; 
+                height: 50%; /* Ekranı yarıya böl */
             }
             
             #remote-box { 
@@ -159,7 +208,9 @@
     <header>
         <div class="brand">
             <div class="logo-symbol">
-                <div class="dot"></div><div class="bridge"></div><div class="dot"></div>
+                <div class="dot"></div>
+                <div class="bridge"></div>
+                <div class="dot"></div>
             </div>
             <h1>UNS</h1>
         </div>
@@ -167,14 +218,17 @@
     </header>
 
     <main>
+        <!-- REMOTE (YAD) -->
         <div class="video-box" id="remote-box">
             <div class="label">🌍 Yad</div>
             <div class="loader" id="loader">
-                <div class="spinner"></div><span>Axtarılır...</span>
+                <div class="spinner"></div>
+                <span>Axtarılır...</span>
             </div>
             <video id="remoteVideo" autoplay playsinline></video>
         </div>
 
+        <!-- LOCAL (SƏN) -->
         <div class="video-box" id="local-box">
             <div class="label">🇦🇿 Sən</div>
             <video id="localVideo" autoplay muted playsinline></video>
@@ -187,11 +241,26 @@
     </footer>
 
     <script>
+        // Render.com və ya Localhost üçün avtomatik socket bağlantısı
         const socket = io({ autoConnect: false });
 
-        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-        let localStream, peerConnection, isSearching = false;
+        // --- QARA EKRAN PROBLEMİNİN HƏLLİ ---
+        // Daha çox pulsuz STUN server əlavə edildi
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+        };
 
+        let localStream;
+        let peerConnection;
+        let isSearching = false;
+
+        // DOM Elementləri
         const localVideo = document.getElementById('localVideo');
         const remoteVideo = document.getElementById('remoteVideo');
         const startBtn = document.getElementById('startBtn');
@@ -199,45 +268,56 @@
         const loader = document.getElementById('loader');
         const onlineCountEl = document.getElementById('onlineCount');
 
-        // 1. REAL ONLINE SAYI (Serverdən gəlir)
+        // 1. REAL ONLİNE SAYINI DİNLE
         socket.on('users_count', (count) => {
             onlineCountEl.innerText = count;
         });
 
-        // 2. KAMERA
+        // 2. KAMERANI AÇ
         async function initCamera() {
             try {
-                // Mobildə arxa kamera əvəzinə ön kameranı məcbur edək:
+                // Mobildə 'facingMode: user' ön kameranı məcbur edir
                 localStream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "user" }, 
                     audio: true 
                 });
                 localVideo.srcObject = localStream;
                 
-                // Socket-i indi qoşuruq ki, online sayı görünsün
+                // Kameranı açan kimi socket-ə qoşuluruq ki, onlayn sayını görək
                 if (!socket.connected) socket.connect(); 
             } catch (err) {
-                alert("Kamera açılmadı: " + err.message);
+                console.error(err);
+                alert("Kameraya icazə verilmədi! Saytı yeniləyin və icazə verin.");
+                startBtn.innerText = "KAMERA YOXDUR";
+                startBtn.disabled = true;
             }
         }
+        
+        // Səhifə yüklənəndə başlat
         initCamera();
 
-        // 3. DÜYMƏLƏR
-        startBtn.onclick = () => {
-            if (!localStream) return alert("Kamera yoxdur!");
+        // 3. DÜYMƏ MƏNTİQİ
+        startBtn.addEventListener('click', () => {
+            if (!localStream) return alert("Kamera aktiv deyil!");
+
             if (!socket.connected) socket.connect();
-            
-            if (isSearching || peerConnection) stopConn(false);
-            
+
+            // Əgər artıq axtarışdadırsa və ya danışırsa, köhnəni kəs və yenisini axtar (NEXT funksiyası)
+            if (isSearching || peerConnection) {
+                stopConn(false); // false = serverdən tam çıxma, sadəcə yenilə
+            }
+
             isSearching = true;
             updateUI('searching');
             socket.emit('find_partner');
-        };
+        });
 
-        stopBtn.onclick = () => {
-            stopConn(true);
-        };
+        stopBtn.addEventListener('click', () => {
+            // Tamamilə dayan (STOP funksiyası)
+            stopConn(true); // true = serverə 'stop_search' göndər
+        });
 
+        // Əlaqəni kəsən əsas funksiya
         function stopConn(fullStop) {
             if (peerConnection) {
                 peerConnection.close();
@@ -247,71 +327,116 @@
             isSearching = false;
 
             if (fullStop) {
+                // Serverə de ki, məni növbədən sil! (Vacib düzəliş)
+                socket.emit('stop_search');
                 updateUI('stopped');
-                // Socket-dən çıxmırıq ki, online sayı yenilənməyə davam etsin, 
-                // amma axtarışı dayandırırıq.
             }
         }
 
+        // UI Dəyişiklikləri
         function updateUI(state) {
             if (state === 'searching') {
                 startBtn.innerText = "NÖVBƏTİ ➡";
                 stopBtn.disabled = false;
                 loader.style.display = 'flex';
                 remoteVideo.style.opacity = '0';
-            } else if (state === 'connected') {
+            } 
+            else if (state === 'connected') {
                 startBtn.innerText = "NÖVBƏTİ ➡";
                 loader.style.display = 'none';
                 remoteVideo.style.opacity = '1';
-            } else if (state === 'stopped') {
+            } 
+            else if (state === 'stopped') {
                 startBtn.innerText = "BAŞLA";
                 stopBtn.disabled = true;
                 loader.style.display = 'none';
-                remoteVideo.style.opacity = '1';
+                remoteVideo.style.opacity = '1'; // Qara ekran qalsın
             }
         }
 
-        // 4. SIGNALING
+        // 4. WEBRTC SIGNALING (Backend ilə əlaqə)
+        
         socket.on('partner_found', async ({ role }) => {
             updateUI('connected');
             createPeerConnection();
+
             if (role === 'offerer') {
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                socket.emit('offer', offer);
+                try {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    socket.emit('offer', offer);
+                } catch (e) { console.error("Offer error:", e); }
             }
         });
 
-        socket.on('offer', async o => {
+        socket.on('offer', async (offer) => {
             if (!peerConnection) createPeerConnection();
-            await peerConnection.setRemoteDescription(o);
-            const a = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(a);
-            socket.emit('answer', a);
+            try {
+                await peerConnection.setRemoteDescription(offer);
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('answer', answer);
+            } catch (e) { console.error("Offer receive error:", e); }
         });
 
-        socket.on('answer', a => peerConnection.setRemoteDescription(a));
-        socket.on('candidate', c => peerConnection.addIceCandidate(c));
-        
+        socket.on('answer', async (answer) => {
+            if (peerConnection) {
+                try {
+                    await peerConnection.setRemoteDescription(answer);
+                } catch (e) { console.error("Answer receive error:", e); }
+            }
+        });
+
+        socket.on('candidate', async (candidate) => {
+            if (peerConnection) {
+                try {
+                    await peerConnection.addIceCandidate(candidate);
+                } catch (e) { console.error("Candidate error:", e); }
+            }
+        });
+
         socket.on('partner_disconnected', () => {
+            // Əlaqəni təmizlə
             if (peerConnection) {
                 peerConnection.close();
                 peerConnection = null;
             }
             remoteVideo.srcObject = null;
-            
-            // Avtomatik növbəti
+
+            // MƏNTİQ: Əgər biz hələ də axtarış rejimindəyiksə (Next basmışıqsa), avtomatik yeni adam tap.
+            // Əgər "Dayan" basmışıqsa (isSearching = false), heç nə etmə.
             if (isSearching) {
                 updateUI('searching');
                 socket.emit('find_partner');
+            } else {
+                updateUI('stopped');
             }
         });
 
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(rtcConfig);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            peerConnection.ontrack = e => remoteVideo.srcObject = e.streams[0];
-            peerConnection.onicecandidate = e => { if (e.candidate) socket.emit('candidate', e.candidate); };
+
+            // Lokal görüntünü qarşı tərəfə göndər
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            // Qarşı tərəfdən gələn görüntünü qəbul et
+            peerConnection.ontrack = (event) => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            // ICE Namizədlərini serverə ötür
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('candidate', event.candidate);
+                }
+            };
+            
+            // WebRTC connection state monitoring (Debug üçün)
+            peerConnection.onconnectionstatechange = () => {
+                console.log("Connection State:", peerConnection.connectionState);
+            };
         }
     </script>
 </body>
