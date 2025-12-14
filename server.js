@@ -15,41 +15,41 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Növbədə gözləyən istifadəçi
-let waitingUser = null;
+// YENİLİK: Növbə Sistemi (Array)
+let waitingQueue = [];
 
 io.on('connection', (socket) => {
     // Online sayını göndər
     io.emit('users_count', io.engine.clientsCount);
 
     socket.on('find_partner', () => {
-        // Əgər istifadəçi artıq növbədədirsə, heç nə etmə (təkrar basılma qarşısını al)
-        if (waitingUser === socket) return;
+        // Əgər istifadəçi artıq növbədədirsə, onu çıxar (təkrar düşməsin)
+        waitingQueue = waitingQueue.filter(u => u.id !== socket.id);
 
-        if (waitingUser) {
-            // Növbədə kimsə var, onları birləşdir
-            const partner = waitingUser;
-            waitingUser = null; // Növbəni boşalt
+        if (waitingQueue.length > 0) {
+            // Növbədən ilk adamı götür (FIFO)
+            const partner = waitingQueue.shift();
 
-            // Hər iki tərəfə partnyor tapıldığını de
-            socket.emit('partner_found', { role: 'offerer' });
-            partner.emit('partner_found', { role: 'answerer' });
+            // Əgər partnyor hələ də bağlıdırsa, birləşdir
+            if (partner && partner.connected) {
+                socket.emit('partner_found', { role: 'offerer' });
+                partner.emit('partner_found', { role: 'answerer' });
 
-            // Bir-birlərini yadda saxla
-            socket.partner = partner;
-            partner.partner = socket;
+                socket.partner = partner;
+                partner.partner = socket;
+            } else {
+                // Partnyor düşübsə, yenidən axtarışa ver (rekursiya)
+                socket.emit('find_partner');
+            }
         } else {
-            // Heç kim yoxdur, sən növbəyə keç
-            waitingUser = socket;
+            // Heç kim yoxdur, növbəyə əlavə et
+            waitingQueue.push(socket);
         }
     });
 
-    // --- YENİ HİSSƏ: Axtarışı dayandır ---
     socket.on('stop_search', () => {
-        // Əgər növbədəki adam bu istifadəçidirsə, növbəni boşalt
-        if (waitingUser === socket) {
-            waitingUser = null;
-        }
+        // Növbədən çıxar
+        waitingQueue = waitingQueue.filter(u => u.id !== socket.id);
     });
 
     // WebRTC Signalling
@@ -58,12 +58,10 @@ io.on('connection', (socket) => {
     socket.on('candidate', (data) => { if (socket.partner) socket.partner.emit('candidate', data); });
 
     socket.on('disconnect', () => {
-        io.emit('users_count', io.engine.clientsCount); // Sayı yenilə
+        io.emit('users_count', io.engine.clientsCount);
 
-        // Çıxan adam növbədə idisə, növbəni sil
-        if (socket === waitingUser) {
-            waitingUser = null;
-        }
+        // Çıxan adamı növbədən sil
+        waitingQueue = waitingQueue.filter(u => u.id !== socket.id);
         
         // Əgər danışırdısa, partnyora xəbər ver
         if (socket.partner) {
